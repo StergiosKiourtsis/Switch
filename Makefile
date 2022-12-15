@@ -1,57 +1,49 @@
-#This makefile is the template for SystemC makefiles
-SYSTEMC_ARCH = linux64
-
-SYSTEMC=/usr/local/systemc-2.3.1
 CATAPULT_HOME := /home/stergios/Documents/libraries
+SYSTEMC_HOME :=  /home/stergios/Documents/libraries/systemc-2.3.3
 
-LIB_DIRS=$(SYSTEMC)/lib-$(SYSTEMC_ARCH)
+CXX = g++
 
-#INCLUDE DIRECTORIES
-INCLUDE_DIRS= -I. -I$(SYSTEMC)/include
-INCLUDE_DIRS += -isystem $(CATAPULT_HOME)/ac_simutils/include/
-INCLUDE_DIRS += -isystem $(CATAPULT_HOME)/matchlib_connections/include/
-INCLUDE_DIRS += -isystem $(CATAPULT_HOME)/ac_types/include/
-INCLUDE_DIRS += -isystem $(SYSTEMC)/src/
+CXXFLAGS = -std=c++11 -Wall -Wno-unknown-pragmas -Wno-unused-variable -Wno-unused-label
+#-Wall -Wno-unknown-pragmas -Wno-unused-variable -Wno-unused-label
 
-HEADERS =  switch.h tb.h
+USER_FLAGS = -DCONNECTIONS_ACCURATE_SIM -DSC_INCLUDE_DYNAMIC_PROCESSES
 
-SOURCES = main.cc tb.cc 
+# RAND_STALL
+# 0 = Random stall of ports and channels disabled (default)
+# 1 = Random stall of ports and channels enabled
+#
+# This feature aids in latency insensitive design verication.
+# Note: Only valid if SIM_MODE = 1 (accurate) or 2 (fast)
+ifeq ($(RAND_STALL),1)
+	USER_FLAGS += -DCONN_RAND_STALL
+endif
 
-DEPENDENCIES = \
-		Makefile \
-		$(HEADERS) \
-		$(SOURCES) 
-		
-LIBS = -lsystemc -lstdc++ -lm 
+INCDIRS = -isystem $(SYSTEMC_HOME)/include
+INCDIRS += -isystem $(CATAPULT_HOME)/ac_simutils/include/
+INCDIRS += -isystem $(CATAPULT_HOME)/matchlib_connections/include/
+INCDIRS += -isystem $(CATAPULT_HOME)/ac_types/include/
+INCDIRS += -isystem $(SYSTEMC_HOME)/src/
 
-TESTS=main
+LIBDIR = -L. -L$(SYSTEMC_HOME)/lib-linux64 -Wl,-rpath=$(SYSTEMC_HOME)/lib-linux64
+LIBS = -lsystemc
 
-all: $(TESTS)
-		./$(TESTS)
-#		@make cmp_result
-		
-$(TESTS): $(DEPENDENCIES) 		
-	gcc -std=c++98 -g -o $@ $(SOURCES) $(INCLUDE_DIRS) -L$(LIB_DIRS) $(LIBS) 
-	
+CPPFLAGS = $(CXXFLAGS)
+CPPFLAGS += $(USER_FLAGS)
+CPPFLAGS += $(INCDIRS)
+
+.PHONY: all build run clean sim_clean help
+.DEFAULT_GOAL := all
+all: run
+
+build: sim_sc
+
+run: build
+	./sim_sc
+
+sim_sc: tb.cc switchBL.h Makefile 
+	$(CXX) -o sim_sc ./tb.cc $(CPPFLAGS) $(LIBDIR) $(LIBS)
+
 clean:
-	rm -f $(TESTS) *.dat
+	rm -f sim_sc
 	
-#to work this Makefile i create a file with name "systemc.conf"
-#to this folder /etc/ld.so.conf.d
-#The file contains this string "/usr/local/systemc-2.3.1/lib-linux64"
-#and the i use this command "sudo ldconfig"
 
-#ref_output.dat file created using xl
-
-#GOLD_DIR = ./golden
-#GOLD_FILE = $(GOLD_DIR)/ref_output.dat
-#
-#cmp_result:
-#		@echo "********************************************************"
-#		@if diff -w $(GOLD_FILE) ./output.dat; then \
-#			echo "SIMULATION PASSED"; \
-#		else \
-#			echo "SIMULATION FAILED"; \
-#		fi
-#		@echo "********************************************************"
-#
