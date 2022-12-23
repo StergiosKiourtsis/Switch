@@ -70,8 +70,8 @@ SC_MODULE( tb ){
   }
     void run() {
     //reset
-    rst = 1;
-    wait(1.0, SC_NS);
+    //rst = 1;
+    //wait(1.0, SC_NS);
     rst = 0;
     cout << "@" << sc_time_stamp() << " Asserting Reset " << endl ;
     wait(1.0, SC_NS);
